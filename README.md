@@ -59,3 +59,12 @@ und in Folge die zugehörigen Formulare ermittelt:
 
 Die Übermittlung erfolgt ohne weiteres Zutun von Seiten des Anwenders und wird bereits durch das Abschließen eines
 DNPM-Formulars ausgelöst.
+
+## Build
+
+Dieses Projekt verwendet das [Shadow Gradle Plugin](https://gradleup.com/shadow/), um benötigte Abhängigkeiten in die
+fertige JAR-Datei zu verpacken.
+
+```bash
+./gradlew clean shadowJar
+```

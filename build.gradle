@@ -1,5 +1,6 @@
 plugins {
     id 'java-library'
+    id("com.gradleup.shadow") version "8.3.8"
 }
 
 group = 'dev.pcvolkmer.onco'
@@ -63,4 +64,14 @@ dependencies {
 
 tasks.named('test') {
     useJUnitPlatform()
+}
+
+// Include dependencies in resulting JAR file
+tasks.shadowJar {
+    minimize()
+    dependencies {
+        exclude("de/itc/onkostar/api/**")
+        include(dependency("dev.pcvolkmer.onco:mv64e-onkostar-data"))
+        include(dependency("dev.pcvolkmer.mv64e:mtb-dto"))
+    }
 }
