@@ -1,0 +1,55 @@
+plugins {
+    id 'java-library'
+}
+
+group = 'dev.pcvolkmer.onco'
+version = '0.1.0-SNAPSHOT'
+description = 'OS Export-Plugin für das DNPM-Datenmodell 2.1'
+
+java.sourceCompatibility = JavaVersion.VERSION_11
+
+repositories {
+    mavenLocal()
+    mavenCentral()
+}
+
+configurations {
+    configureEach {
+        resolutionStrategy {
+            cacheChangingModulesFor(5, "minutes")
+        }
+    }
+}
+
+ext {
+    onkostarVersion = '2.14.1'
+    springVersion = '4.3.8.RELEASE'
+    slf4jVersion = '1.7.2'
+    junitVersion = '5.12.1'
+    assertjVersion = '3.27.3'
+    mockitoVersion = '5.16.1'
+}
+
+dependencies {
+    implementation files("./libs/onkostar-api-${onkostarVersion}.jar")
+
+    implementation "org.springframework:spring-beans:${springVersion}"
+    implementation "org.springframework:spring-context:${springVersion}"
+    implementation "org.springframework:spring-jdbc:${springVersion}"
+    implementation "org.slf4j:slf4j-api:${slf4jVersion}"
+
+    implementation("dev.pcvolkmer.onco:mv64e-onkostar-data:0.1.0-SNAPSHOT") { changing = true }
+
+    testImplementation "org.springframework:spring-test:${springVersion}"
+    testImplementation "org.junit.jupiter:junit-jupiter-engine:${junitVersion}"
+    testImplementation "org.junit.jupiter:junit-jupiter-params:${junitVersion}"
+    testImplementation "org.assertj:assertj-core:${assertjVersion}"
+    testImplementation "org.mockito:mockito-core:${mockitoVersion}"
+    testImplementation "org.mockito:mockito-junit-jupiter:${mockitoVersion}"
+    testImplementation "ca.uhn.hapi:hapi-structures-v26:2.3"
+    testImplementation "org.hibernate:hibernate-core:4.3.11.Final"
+}
+
+tasks.named('test') {
+    useJUnitPlatform()
+}
