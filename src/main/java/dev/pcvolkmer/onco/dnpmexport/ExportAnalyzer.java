@@ -6,12 +6,19 @@ import de.itc.onkostar.api.Procedure;
 import de.itc.onkostar.api.analysis.AnalyzerRequirement;
 import de.itc.onkostar.api.analysis.IProcedureAnalyzer;
 import de.itc.onkostar.api.analysis.OnkostarPluginType;
+import dev.pcvolkmer.mv64e.mtb.Mtb;
 import dev.pcvolkmer.onco.datamapper.mapper.MtbDataMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
+import org.springframework.web.client.RestClientException;
+import org.springframework.web.client.RestTemplate;
 
-import javax.sql.DataSource;
+import java.net.URI;
+import java.util.Base64;
 
 /**
  * Analyzer to start export if DNPM Klinik/Anamnese or DNPM Therapieplan form gets locked
@@ -26,11 +33,16 @@ public class ExportAnalyzer implements IProcedureAnalyzer {
 
     private final IOnkostarApi onkostarApi;
     private final MtbDataMapper mtbDataMapper;
+    private final RestTemplate restTemplate;
 
-    public ExportAnalyzer(final IOnkostarApi onkostarApi, final DataSource dataSource) {
+    public ExportAnalyzer(
+            final IOnkostarApi onkostarApi,
+            final MtbDataMapper mtbDataMapper,
+            final RestTemplate restTemplate
+    ) {
         this.onkostarApi = onkostarApi;
-        // Reuse default Onkostar DataSource for MtbDataMapper
-        this.mtbDataMapper = MtbDataMapper.create(dataSource);
+        this.mtbDataMapper = mtbDataMapper;
+        this.restTemplate = restTemplate;
     }
 
     @Override
@@ -79,28 +91,55 @@ public class ExportAnalyzer implements IProcedureAnalyzer {
         logger.info("Starting export for procedure {}", procedure.getId());
 
         try {
-            String caseId = "";
+            String caseId;
             switch (procedure.getFormName()) {
                 case "DNPM Klinik/Anamnese":
-                    caseId = procedure.getValue("FallnummrMV").getString();
+                    caseId = procedure.getValue("FallnummerMV").getString();
                     break;
                 case "DNPM Therapieplan":
                     var kpaProcedure = onkostarApi.getProcedure(
                             procedure.getValue("ref_dnpm_klinikanamnese").getInt()
                     );
-                    caseId = kpaProcedure.getValue("FallnummrMV").getString();
+                    caseId = kpaProcedure.getValue("FallnummerMV").getString();
                     break;
                 default:
                     logger.info("Cannot handle procedure form {}", procedure.getFormName());
                     return;
             }
-            var mtb = mtbDataMapper.getByCaseId(caseId);
 
-            // TODO: Send MTB data to remote application
+            var mtb = mtbDataMapper.getByCaseId(caseId);
+            sendMtbFileRequest(mtb);
         } catch (Exception e) {
             logger.error("Could export mtb data for procedure {}", procedure.getId(), e);
         }
 
+    }
+
+    private void sendMtbFileRequest(Mtb mtb) {
+        var exportUrl = onkostarApi.getGlobalSetting("dnpmexport_url");
+
+        try {
+            var uri = URI.create(exportUrl);
+            var headers = new HttpHeaders();
+            headers.setContentType(MediaType.APPLICATION_JSON);
+            if (uri.getUserInfo() != null) {
+                headers.set(HttpHeaders.AUTHORIZATION, "Basic " + Base64.getEncoder().encodeToString(uri.getUserInfo().getBytes()));
+            }
+
+            var entityReq = new HttpEntity<>(mtb, headers);
+
+            var r = restTemplate.postForEntity(uri, entityReq, String.class);
+            if (!r.getStatusCode().is2xxSuccessful()) {
+                logger.warn("Error sending to remote system: {}", r.getBody());
+                throw new RuntimeException("Kann Daten nicht an das externe System senden");
+            }
+        } catch (IllegalArgumentException e) {
+            logger.error("Not a valid URI to export to: '{}'", exportUrl);
+            throw new RuntimeException("Keine gültige Adresse für das externe System");
+        } catch (RestClientException e) {
+            logger.error("Cannot send data to remote system", e);
+            throw new RuntimeException("Kann Daten nicht an das externe System senden");
+        }
     }
 
 }
