@@ -107,7 +107,8 @@ public class ExportAnalyzer implements IProcedureAnalyzer {
                     return;
             }
 
-            var mtb = mtbDataMapper.getByCaseId(caseId);
+            Mtb mtb = mtbDataMapper.getByCaseId(caseId);
+            mtb.getPatient().setId(caseId);
             sendMtbFileRequest(mtb);
         } catch (Exception e) {
             logger.error("Could export mtb data for procedure {}", procedure.getId(), e);
