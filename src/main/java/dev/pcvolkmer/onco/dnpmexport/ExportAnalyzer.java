@@ -3,6 +3,7 @@ package dev.pcvolkmer.onco.dnpmexport;
 import de.itc.onkostar.api.Disease;
 import de.itc.onkostar.api.IOnkostarApi;
 import de.itc.onkostar.api.Procedure;
+import de.itc.onkostar.api.analysis.AnalyseTriggerEvent;
 import de.itc.onkostar.api.analysis.AnalyzerRequirement;
 import de.itc.onkostar.api.analysis.IProcedureAnalyzer;
 import de.itc.onkostar.api.analysis.OnkostarPluginType;
@@ -19,6 +20,7 @@ import org.springframework.web.client.RestTemplate;
 
 import java.net.URI;
 import java.util.Base64;
+import java.util.Set;
 
 /**
  * Analyzer to start export if DNPM Klinik/Anamnese or DNPM Therapieplan form gets locked
@@ -113,6 +115,15 @@ public class ExportAnalyzer implements IProcedureAnalyzer {
             logger.error("Could export mtb data for procedure {}", procedure.getId(), e);
         }
 
+    }
+
+    @Override
+    public Set<AnalyseTriggerEvent> getTriggerEvents() {
+        return Set.of(
+                AnalyseTriggerEvent.LOCK,
+                AnalyseTriggerEvent.EDIT_LOCK,
+                AnalyseTriggerEvent.REORG
+        );
     }
 
     private void sendMtbFileRequest(Mtb mtb) {
