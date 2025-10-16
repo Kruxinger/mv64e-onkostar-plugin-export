@@ -3,6 +3,7 @@ package dev.pcvolkmer.onco.dnpmexport;
 import dev.pcvolkmer.onco.datamapper.mapper.MtbDataMapper;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.web.client.RestTemplate;
 
 import javax.sql.DataSource;
 
@@ -14,5 +15,8 @@ public class ExportAnalyzerConfig {
         // Reuse default Onkostar DataSource for MtbDataMapper
         return MtbDataMapper.create(dataSource);
     }
-
+    @Bean
+    public RestTemplate restTemplate() {
+        return new RestTemplate();
+    }
 }
