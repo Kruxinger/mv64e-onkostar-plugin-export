@@ -73,5 +73,10 @@ tasks.shadowJar {
         exclude("de/itc/onkostar/api/**")
         include(dependency("dev.pcvolkmer.onco:mv64e-onkostar-data"))
         include(dependency("dev.pcvolkmer.mv64e:mtb-dto"))
+        include(dependency("org.springframework:spring-beans"))
+        include(dependency("org.springframework:spring-context"))
+        include(dependency("org.springframework:spring-core"))
+        include(dependency("org.springframework:spring-web"))
+        include(dependency("org.springframework:spring-jdbc"))
     }
 }

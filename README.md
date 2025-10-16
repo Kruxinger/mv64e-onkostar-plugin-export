@@ -1,3 +1,5 @@
+(Bauen mit `gradlew shadowJar`)
+
 # Onkostar Plugin "mv64e-onkostar-plugin-export"
 
 Aufgabe dieses Plugins ist es, die Inhalte der DNPM-Formulare in die Datenstruktur des DNPM-Datenmodells 2.1 zu wandeln

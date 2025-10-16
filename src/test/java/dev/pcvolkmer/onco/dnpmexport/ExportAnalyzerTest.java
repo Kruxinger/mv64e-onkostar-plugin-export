@@ -41,8 +41,9 @@ class ExportAnalyzerTest {
         this.restTemplate = restTemplate;
         this.analyzer = new ExportAnalyzer(onkostarApi, mtbDataMapper, restTemplate);
 
-        doAnswer(invocationOnMock -> {
-            var name = invocationOnMock.getArgument(0, String.class);
+        // lenient Stub für globale Settings
+        lenient().doAnswer(invocation -> {
+            String name = invocation.getArgument(0, String.class);
             return defaultSetting(name);
         }).when(this.onkostarApi).getGlobalSetting(anyString());
     }
@@ -61,61 +62,62 @@ class ExportAnalyzerTest {
     @Test
     void shouldExtractMtbDataForKlinikAnamnese() {
         when(mtbDataMapper.getByCaseId(anyString())).thenReturn(Mtb.builder().build());
-        when(this.restTemplate.postForEntity(any(URI.class), any(), any())).thenReturn(ResponseEntity.accepted().build());
 
-        var procedure = new Procedure(onkostarApi);
+        Procedure procedure = new Procedure(onkostarApi);
         procedure.setId(1);
         procedure.setFormName("DNPM Klinik/Anamnese");
         procedure.setValue("FallnummerMV", new Item("FallnummerMV", "1600012345"));
 
-        this.analyzer.analyze(procedure, null);
+        analyzer.analyze(procedure, null);
 
-        var caseIdCaptor = ArgumentCaptor.forClass(String.class);
+        ArgumentCaptor<String> caseIdCaptor = ArgumentCaptor.forClass(String.class);
         verify(mtbDataMapper, times(1)).getByCaseId(caseIdCaptor.capture());
         assertThat(caseIdCaptor.getValue()).isEqualTo("1600012345");
     }
 
     @Test
     void shouldExtractMtbDataForTherapieplan() {
-        doAnswer(invocationOnMock -> {
-            var procedure = new Procedure(onkostarApi);
+        doAnswer(invocation -> {
+            Procedure procedure = new Procedure(onkostarApi);
             procedure.setId(1);
             procedure.setFormName("DNPM Klinik/Anamnese");
             procedure.setValue("FallnummerMV", new Item("FallnummerMV", "1600012345"));
             return procedure;
-        }).when(this.onkostarApi).getProcedure(anyInt());
+        }).when(onkostarApi).getProcedure(anyInt());
 
         when(mtbDataMapper.getByCaseId(anyString())).thenReturn(Mtb.builder().build());
-        when(this.restTemplate.postForEntity(any(URI.class), any(), any())).thenReturn(ResponseEntity.accepted().build());
 
-        var procedure = new Procedure(onkostarApi);
+        Procedure procedure = new Procedure(onkostarApi);
         procedure.setId(2);
         procedure.setFormName("DNPM Therapieplan");
         procedure.setValue("ref_dnpm_klinikanamnese", new Item("ref_dnpm_klinikanamnese", 1));
 
-        this.analyzer.analyze(procedure, null);
+        analyzer.analyze(procedure, null);
 
-        var kpaIdCaptor = ArgumentCaptor.forClass(Integer.class);
+        ArgumentCaptor<Integer> kpaIdCaptor = ArgumentCaptor.forClass(Integer.class);
         verify(onkostarApi, times(1)).getProcedure(kpaIdCaptor.capture());
         assertThat(kpaIdCaptor.getValue()).isEqualTo(1);
 
-        var caseIdCaptor = ArgumentCaptor.forClass(String.class);
+        ArgumentCaptor<String> caseIdCaptor = ArgumentCaptor.forClass(String.class);
         verify(mtbDataMapper, times(1)).getByCaseId(caseIdCaptor.capture());
         assertThat(caseIdCaptor.getValue()).isEqualTo("1600012345");
     }
 
     @Test
     void shouldSendHttpRequestWithMtbData() {
+        // Stub nur für diesen Test
         when(mtbDataMapper.getByCaseId(anyString())).thenReturn(Mtb.builder().build());
-        when(this.restTemplate.postForEntity(any(URI.class), any(), any())).thenReturn(ResponseEntity.accepted().build());
+        when(restTemplate.postForEntity(any(URI.class), any(), any()))
+                .thenReturn(ResponseEntity.accepted().build());
 
-        var procedure = new Procedure(onkostarApi);
+        Procedure procedure = new Procedure(onkostarApi);
         procedure.setId(1);
         procedure.setFormName("DNPM Klinik/Anamnese");
         procedure.setValue("FallnummerMV", new Item("FallnummerMV", "1600012345"));
 
-        this.analyzer.analyze(procedure, null);
+        analyzer.analyze(procedure, null);
 
+        // Sicherstellen, dass HTTP-Call wirklich passiert
         verify(restTemplate, times(1)).postForEntity(any(URI.class), any(), any());
     }
 }
