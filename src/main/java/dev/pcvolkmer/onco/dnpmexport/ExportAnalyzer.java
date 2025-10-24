@@ -18,7 +18,7 @@ import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestTemplate;
 
 import java.net.URI;
-import java.util.Base64;
+import java.util.*;
 
 /**
  * Analyzer to start export if DNPM Klinik/Anamnese or DNPM Therapieplan form gets locked
@@ -106,9 +106,12 @@ public class ExportAnalyzer implements IProcedureAnalyzer {
                     logger.info("Cannot handle procedure form {}", procedure.getFormName());
                     return;
             }
-
             Mtb mtb = mtbDataMapper.getByCaseId(caseId);
-            mtb.getPatient().setId(caseId);
+
+
+            mtb.getPatient().setId(mtb.getPatient().getId()+"###"+caseId);
+
+
             sendMtbFileRequest(mtb);
         } catch (Exception e) {
             logger.error("Could export mtb data for procedure {}", procedure.getId(), e);
