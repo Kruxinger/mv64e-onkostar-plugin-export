@@ -11,6 +11,7 @@ import dev.pcvolkmer.mv64e.mtb.Mtb;
 import dev.pcvolkmer.onco.datamapper.mapper.MtbDataMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
@@ -40,7 +41,7 @@ public class ExportAnalyzer implements IProcedureAnalyzer {
     public ExportAnalyzer(
             final IOnkostarApi onkostarApi,
             final MtbDataMapper mtbDataMapper,
-            final RestTemplate restTemplate
+            @Qualifier("mv64eExportRestTemplate") final RestTemplate restTemplate
     ) {
         this.onkostarApi = onkostarApi;
         this.mtbDataMapper = mtbDataMapper;
