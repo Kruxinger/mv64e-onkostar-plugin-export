@@ -101,7 +101,7 @@ public class ExportAnalyzer implements IProcedureAnalyzer {
                     break;
                 case "DNPM Therapieplan":
                     var kpaProcedure = onkostarApi.getProcedure(
-                            procedure.getValue("ref_dnpm_klinikanamnese").getInt()
+                            procedure.getValue("refdnpmklinikanamnese").getInt()
                     );
                     caseId = kpaProcedure.getValue("FallnummerMV").getString();
                     break;

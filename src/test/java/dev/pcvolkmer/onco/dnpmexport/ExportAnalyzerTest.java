@@ -91,7 +91,7 @@ class ExportAnalyzerTest {
         var procedure = new Procedure(onkostarApi);
         procedure.setId(2);
         procedure.setFormName("DNPM Therapieplan");
-        procedure.setValue("ref_dnpm_klinikanamnese", new Item("ref_dnpm_klinikanamnese", 1));
+        procedure.setValue("refdnpmklinikanamnese", new Item("ref_dnpm_klinikanamnese", 1));
 
         this.analyzer.analyze(procedure, null);
 
