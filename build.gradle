@@ -4,13 +4,14 @@ plugins {
 }
 
 group = 'dev.pcvolkmer.onco'
-version = '0.1.11'
+version = '0.1.12'
 description = 'OS Export-Plugin für das DNPM-Datenmodell 2.1'
 java.sourceCompatibility = JavaVersion.VERSION_17
 
 repositories {
     mavenLocal()
     mavenCentral()
+    // Ignore the next two maven repositories if you want to use a local build
     maven {
         url = uri("https://git.dnpm.dev/api/packages/public-snapshots/maven")
     }

@@ -133,7 +133,7 @@ public class ExportAnalyzer implements IProcedureAnalyzer {
 
 
         } catch (Exception e) {
-            logger.error("Could export mtb data for procedure {}", procedure.getId(), e);
+            logger.error("Could not export mtb data for procedure {}", procedure.getId(), e);
         }
 
     }
@@ -151,28 +151,29 @@ public class ExportAnalyzer implements IProcedureAnalyzer {
         var restTemplate = new RestTemplate();
         var objectMapper = new ObjectMapper();
 
+        // UTF-8 für String-Konverter erzwingen
+        restTemplate.getMessageConverters().removeIf(c -> c instanceof StringHttpMessageConverter);
+        restTemplate.getMessageConverters().add(new StringHttpMessageConverter(StandardCharsets.UTF_8));
+
         try {
             // 1️⃣ Objekt in JSON-String serialisieren
             String jsonPayload = objectMapper.writeValueAsString(mtb);
-
             logger.debug("JSON to send: {}", jsonPayload);
 
             // 2️⃣ HttpEntity mit String-Body erstellen
             var headers = new HttpHeaders();
-            headers.setContentType(MediaType.APPLICATION_JSON);
+            headers.setContentType(new MediaType("application", "json", StandardCharsets.UTF_8));
 
             var uri = URI.create(exportUrl);
             if (uri.getUserInfo() != null) {
                 headers.set(HttpHeaders.AUTHORIZATION, "Basic " +
-                        Base64.getEncoder().encodeToString(uri.getUserInfo().getBytes()));
+                        Base64.getEncoder().encodeToString(uri.getUserInfo().getBytes(StandardCharsets.UTF_8)));
             }
 
             var entityReq = new HttpEntity<>(jsonPayload, headers);
 
-            // 3️⃣ POST mit String senden
+            // 3️⃣ POST mit UTF-8-encoded String senden
             var r = restTemplate.postForEntity(uri, entityReq, String.class);
-            restTemplate.getMessageConverters().removeIf(c -> c instanceof StringHttpMessageConverter);
-            restTemplate.getMessageConverters().add(new StringHttpMessageConverter(StandardCharsets.UTF_8));
             if (!r.getStatusCode().is2xxSuccessful()) {
                 logger.warn("Error sending to remote system: {}", r.getBody());
                 throw new RuntimeException("Kann Daten nicht an das externe System senden");
@@ -183,5 +184,6 @@ public class ExportAnalyzer implements IProcedureAnalyzer {
             throw new RuntimeException("Kann Daten nicht an das externe System senden");
         }
     }
+
 
 }
