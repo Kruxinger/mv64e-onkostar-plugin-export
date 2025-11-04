@@ -1,5 +1,7 @@
 package dev.pcvolkmer.onco.dnpmexport;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import de.itc.onkostar.api.Disease;
 import de.itc.onkostar.api.IOnkostarApi;
 import de.itc.onkostar.api.Procedure;
@@ -8,17 +10,20 @@ import de.itc.onkostar.api.analysis.AnalyzerRequirement;
 import de.itc.onkostar.api.analysis.IProcedureAnalyzer;
 import de.itc.onkostar.api.analysis.OnkostarPluginType;
 import dev.pcvolkmer.mv64e.mtb.Mtb;
+import dev.pcvolkmer.mv64e.mtb.Patient;
 import dev.pcvolkmer.onco.datamapper.mapper.MtbDataMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
+import org.springframework.http.converter.StringHttpMessageConverter;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestTemplate;
 
 import java.net.URI;
+import java.nio.charset.StandardCharsets;
 import java.util.*;
 
 /**
@@ -112,8 +117,21 @@ public class ExportAnalyzer implements IProcedureAnalyzer {
 
             mtb.getPatient().setId(mtb.getPatient().getId()+"###"+caseId);
 
+            Mtb filtered = new Mtb();
+            Patient pat = new Patient();
+            pat.setBirthDate(mtb.getPatient().getBirthDate());
+            pat.setGender(mtb.getPatient().getGender());
+            pat.getGender().setCode(mtb.getPatient().getGender().getCode());
+            pat.setHealthInsurance(mtb.getPatient().getHealthInsurance());
+            pat.setId(mtb.getPatient().getId());
+            filtered.setPatient(pat);
+            filtered.setEpisodesOfCare(mtb.getEpisodesOfCare());
+            filtered.setDiagnoses(mtb.getDiagnoses());
+            filtered.setMetadata(mtb.getMetadata());
 
-            sendMtbFileRequest(mtb);
+            sendMtbFileRequest(filtered);
+
+
         } catch (Exception e) {
             logger.error("Could export mtb data for procedure {}", procedure.getId(), e);
         }
@@ -128,28 +146,39 @@ public class ExportAnalyzer implements IProcedureAnalyzer {
         );
     }
 
-    private void sendMtbFileRequest(Mtb mtb) {
+    public void sendMtbFileRequest(Mtb mtb) {
         var exportUrl = onkostarApi.getGlobalSetting("dnpmexport_url");
+        var restTemplate = new RestTemplate();
+        var objectMapper = new ObjectMapper();
 
         try {
-            var uri = URI.create(exportUrl);
+            // 1️⃣ Objekt in JSON-String serialisieren
+            String jsonPayload = objectMapper.writeValueAsString(mtb);
+
+            logger.debug("JSON to send: {}", jsonPayload);
+
+            // 2️⃣ HttpEntity mit String-Body erstellen
             var headers = new HttpHeaders();
             headers.setContentType(MediaType.APPLICATION_JSON);
+
+            var uri = URI.create(exportUrl);
             if (uri.getUserInfo() != null) {
-                headers.set(HttpHeaders.AUTHORIZATION, "Basic " + Base64.getEncoder().encodeToString(uri.getUserInfo().getBytes()));
+                headers.set(HttpHeaders.AUTHORIZATION, "Basic " +
+                        Base64.getEncoder().encodeToString(uri.getUserInfo().getBytes()));
             }
 
-            var entityReq = new HttpEntity<>(mtb, headers);
+            var entityReq = new HttpEntity<>(jsonPayload, headers);
 
+            // 3️⃣ POST mit String senden
             var r = restTemplate.postForEntity(uri, entityReq, String.class);
+            restTemplate.getMessageConverters().removeIf(c -> c instanceof StringHttpMessageConverter);
+            restTemplate.getMessageConverters().add(new StringHttpMessageConverter(StandardCharsets.UTF_8));
             if (!r.getStatusCode().is2xxSuccessful()) {
                 logger.warn("Error sending to remote system: {}", r.getBody());
                 throw new RuntimeException("Kann Daten nicht an das externe System senden");
             }
-        } catch (IllegalArgumentException e) {
-            logger.error("Not a valid URI to export to: '{}'", exportUrl);
-            throw new RuntimeException("Keine gültige Adresse für das externe System");
-        } catch (RestClientException e) {
+
+        } catch (Exception e) {
             logger.error("Cannot send data to remote system", e);
             throw new RuntimeException("Kann Daten nicht an das externe System senden");
         }

@@ -4,22 +4,20 @@ plugins {
 }
 
 group = 'dev.pcvolkmer.onco'
-version = '0.1.1'
+version = '0.1.11'
 description = 'OS Export-Plugin für das DNPM-Datenmodell 2.1'
-
-java.sourceCompatibility = JavaVersion.VERSION_11
+java.sourceCompatibility = JavaVersion.VERSION_17
 
 repositories {
+    mavenLocal()
     mavenCentral()
-    // Ignore the next two maven repositories if you want to use a local build
     maven {
         url = uri("https://git.dnpm.dev/api/packages/public-snapshots/maven")
     }
     maven {
         url = uri("https://git.dnpm.dev/api/packages/public/maven")
     }
-    // Local repository for local dependency build
-    mavenLocal()
+
 }
 
 configurations {
@@ -29,7 +27,6 @@ configurations {
         }
     }
 }
-
 
 ext {
     onkostarVersion = '2.14.0'
@@ -42,18 +39,16 @@ ext {
 
 dependencies {
     implementation files("./libs/onkostar-api-${onkostarVersion}.jar")
-
     implementation "org.springframework:spring-beans:${springVersion}"
     implementation "org.springframework:spring-context:${springVersion}"
     implementation "org.springframework:spring-web:${springVersion}"
     implementation "org.springframework:spring-jdbc:${springVersion}"
     implementation "org.slf4j:slf4j-api:${slf4jVersion}"
-    implementation 'org.apache.commons:commons-csv:1.10.0'
-
-    implementation("dev.pcvolkmer.onco:mv64e-onkostar-data:0.1.0-SNAPSHOT") { changing = true }
+    implementation("dev.pcvolkmer.onco:mv64e-onkostar-data:0.1.1-SNAPSHOT") {
+        changing = true
+    }
 
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher:1.13.3'
-
     testImplementation "org.springframework:spring-test:${springVersion}"
     testImplementation "org.junit.jupiter:junit-jupiter-engine:${junitVersion}"
     testImplementation "org.junit.jupiter:junit-jupiter-params:${junitVersion}"
@@ -68,19 +63,28 @@ tasks.named('test') {
     useJUnitPlatform()
 }
 
-// Include dependencies in resulting JAR file
 tasks.shadowJar {
-    minimize()
-    dependencies {
-        exclude("de/itc/onkostar/api/**")
-        include(dependency("dev.pcvolkmer.onco:mv64e-onkostar-data"))
-        include(dependency("dev.pcvolkmer.mv64e:mtb-dto"))
-        include(dependency("org.springframework:spring-beans"))
-        include(dependency("org.springframework:spring-context"))
-        include(dependency("org.springframework:spring-core"))
-        include(dependency("org.springframework:spring-web"))
-        include(dependency("org.springframework:spring-jdbc"))
-        include(dependency('org.apache.commons:commons-csv'))
-    }
+    archiveClassifier.set('all')
+
+    // Relocations für Versionskonflikte
     relocate 'org.apache.commons.csv', 'dev.pcvolkmer.onco.shadow.commons.csv'
+    relocate 'org.apache.commons.io', 'dev.pcvolkmer.onco.shadow.commons.io'
+    relocate 'org.apache.commons.lang3', 'dev.pcvolkmer.onco.shadow.commons.lang3'
+    relocate 'org.apache.commons.text', 'dev.pcvolkmer.onco.shadow.commons.text'
+    relocate 'com.fasterxml.jackson', 'dev.pcvolkmer.onco.shadow.jackson'
+    relocate 'com.google.common', 'dev.pcvolkmer.onco.shadow.guava'
+
+    dependencies {
+        // NUR das ausschließen, was Onkostar bereits hat
+        exclude(dependency('org.springframework:.*'))
+        exclude(dependency('org.slf4j:.*'))
+        exclude(dependency {
+            it.moduleGroup == 'de.itc.onkostar'
+        })
+
+        // ALLE anderen Dependencies automatisch inkludieren
+        // (keine expliziten include-Regeln!)
+    }
+
+    mergeServiceFiles()
 }
