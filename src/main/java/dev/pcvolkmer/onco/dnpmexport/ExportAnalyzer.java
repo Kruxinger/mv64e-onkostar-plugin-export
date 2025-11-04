@@ -18,6 +18,7 @@ import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.converter.StringHttpMessageConverter;
+import org.springframework.http.converter.json.MappingJackson2HttpMessageConverter;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestTemplate;
@@ -149,18 +150,17 @@ public class ExportAnalyzer implements IProcedureAnalyzer {
     public void sendMtbFileRequest(Mtb mtb) {
         var exportUrl = onkostarApi.getGlobalSetting("dnpmexport_url");
         var restTemplate = new RestTemplate();
-        var objectMapper = new ObjectMapper();
 
-        // UTF-8 für String-Konverter erzwingen
+        // JSON-Konverter mit UTF-8 aktivieren
         restTemplate.getMessageConverters().removeIf(c -> c instanceof StringHttpMessageConverter);
-        restTemplate.getMessageConverters().add(new StringHttpMessageConverter(StandardCharsets.UTF_8));
+        restTemplate.getMessageConverters().add(new MappingJackson2HttpMessageConverter());
 
         try {
-            // 1️⃣ Objekt in JSON-String serialisieren
-            String jsonPayload = objectMapper.writeValueAsString(mtb);
-            logger.debug("JSON to send: {}", jsonPayload);
+            // Logging nur zur Kontrolle
+            var objectMapper = new ObjectMapper();
+            logger.debug("JSON to send: {}", objectMapper.writeValueAsString(mtb));
 
-            // 2️⃣ HttpEntity mit String-Body erstellen
+            // Header vorbereiten
             var headers = new HttpHeaders();
             headers.setContentType(new MediaType("application", "json", StandardCharsets.UTF_8));
 
@@ -170,9 +170,10 @@ public class ExportAnalyzer implements IProcedureAnalyzer {
                         Base64.getEncoder().encodeToString(uri.getUserInfo().getBytes(StandardCharsets.UTF_8)));
             }
 
-            var entityReq = new HttpEntity<>(jsonPayload, headers);
+            // Das Objekt direkt (nicht als String!) übergeben
+            var entityReq = new HttpEntity<>(mtb, headers);
 
-            // 3️⃣ POST mit UTF-8-encoded String senden
+            // POST absenden
             var r = restTemplate.postForEntity(uri, entityReq, String.class);
             if (!r.getStatusCode().is2xxSuccessful()) {
                 logger.warn("Error sending to remote system: {}", r.getBody());
@@ -184,6 +185,7 @@ public class ExportAnalyzer implements IProcedureAnalyzer {
             throw new RuntimeException("Kann Daten nicht an das externe System senden");
         }
     }
+
 
 
 }
