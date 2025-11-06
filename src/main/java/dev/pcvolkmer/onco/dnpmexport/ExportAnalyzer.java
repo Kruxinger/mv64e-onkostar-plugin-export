@@ -10,6 +10,7 @@ import de.itc.onkostar.api.analysis.AnalyzerRequirement;
 import de.itc.onkostar.api.analysis.IProcedureAnalyzer;
 import de.itc.onkostar.api.analysis.OnkostarPluginType;
 import dev.pcvolkmer.mv64e.mtb.Mtb;
+import dev.pcvolkmer.mv64e.mtb.MvhSubmissionType;
 import dev.pcvolkmer.mv64e.mtb.Patient;
 import dev.pcvolkmer.onco.datamapper.mapper.MtbDataMapper;
 import org.slf4j.Logger;
@@ -129,6 +130,13 @@ public class ExportAnalyzer implements IProcedureAnalyzer {
             filtered.setEpisodesOfCare(mtb.getEpisodesOfCare());
             filtered.setDiagnoses(mtb.getDiagnoses());
             filtered.setMetadata(mtb.getMetadata());
+
+            String exportUrl = onkostarApi.getGlobalSetting("dnpmexport_prefix");
+            if(exportUrl.trim().equalsIgnoreCase("initial"))
+                mtb.getMetadata().setType(MvhSubmissionType.INITIAL);
+            if(exportUrl.trim().equalsIgnoreCase("test"))
+                mtb.getMetadata().setType(MvhSubmissionType.TEST);
+
 
             sendMtbFileRequest(filtered);
 
